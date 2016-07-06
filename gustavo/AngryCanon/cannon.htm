@@ -1,0 +1,283 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+
+<script type="text/javascript" src="engine/math.js"></script>
+<script type="text/javascript" src="engine/body.js"></script>
+<script type="text/javascript" src="engine/world.js"></script>
+<script type="text/javascript" src="engine/collision.js"></script>
+<script type="text/javascript" src="engine/contact.js"></script>
+<script type="text/javascript" src="engine/constraint.js"></script>
+<script type="text/javascript" src="engine/ragdall.js"></script>
+
+<script type="text/javascript">
+
+var elapsed_time = 1/60;
+var canvas;
+var ctx;
+var	ex = 10;
+var ey = 10;
+var ox = 0;
+var oy = 0;
+
+var time = 0;
+
+// pos y tamaño de pantalla
+var OX = 1;
+var OY = 1;
+var DX = 90;
+var DY = 60;
+
+var Objetivo = null;
+
+// posicion del mouse
+var mouse_x = 0;
+var mouse_y = 0;
+
+var gravity = new Vector2( 0, 9.8 );
+var fixed_dt = 1.0/60.0;								// avance del tiempo constante
+var _world = new World();
+var init = false;
+var Status = 0;
+
+//Canion
+var Canion = null;
+var posCanion = {x: 4, y: 8};
+var AnchoCanion = 7;
+var AltoCanion = 2;
+
+//Bala
+var Bala = null;
+var Balas = [{bala : null, lifeTime: 0, bClass: 0, active: false}];
+var posBala = {x: 0, y: 0};
+var Radio = AltoCanion / 2;
+var SM = 25;
+var MaxLifeTime = 1000;
+var MaxEXP = 50;
+
+var img = document.createElement("IMG");
+img.src = "ball.png";
+
+//Piso
+var PosPiso = {x: 42, y: 5};
+
+function Update() 
+{
+    _world.Update(elapsed_time);
+    time++;
+    for (var i = 0; i < Balas.length; i++) {
+        if(Balas[i].bClass == 2){
+            if (time - Balas[i].lifeTime >= MaxLifeTime / 13) {
+                if (Balas[i].active == false) {
+                    for (var exp = 0; exp < MaxEXP/10; exp++) {
+                        Bala = _world.AddCircle(Balas[i].bala.position.x, Balas[i].bala.position.y + (Radio + 3) * exp, Radio);
+                        if (Bala.position.y > (OY + DY - PosPiso.y))
+                            Bala.position.y = OY + DY - PosPiso.y - 5;
+                        Bala.color = '#999';
+                        Bala.velocity.x = Balas[i].bala.velocity.x * 3;
+                        Bala.velocity.y = Balas[i].bala.velocity.y * 3;
+                        Bala.img = img;
+                        Balas.push({ bala: Bala, lifeTime: time, bClass: 3, active: false });
+                    }
+                    Balas[i].active = true;
+                    Balas[i].bala.deleted = true;
+                }
+            }
+        }
+        if (Balas[i].bClass == 1) {
+            if (time - Balas[i].lifeTime >= MaxLifeTime / 3) {
+                if (Balas[i].active == false) {
+                    for (var exp = 0; exp < MaxEXP; exp++) {
+                        Bala = _world.AddCircle(Balas[i].bala.position.x, Balas[i].bala.position.y, Radio);
+                        Bala.color = '#999';
+                        Bala.img = img;
+                        Balas.push({ bala: Bala, lifeTime: time, bClass: 3, active: false });
+                    }
+                    Balas[i].active = true;
+                    Balas[i].bala.deleted = true;
+                }
+            }
+        }
+        if(Balas[i].bClass == 3){       
+            if (time - Balas[i].lifeTime >= MaxLifeTime / 3) {
+                Balas[i].bala.deleted = true;
+            }
+        }
+    }
+}
+
+function Render() 
+{
+    //console.log(Objetivo.position.y);
+    if (canvas.getContext)
+    {
+        // borro la pantalla
+        ctx.fillStyle = 'rgba(0,0,0,128)';
+        ctx.fillRect(0, 0, 2000, 2000);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.lineWidth = "6";
+        ctx.strokeStyle = "red";
+        ctx.rect(0, 520, 2000, 1);
+        ctx.stroke();
+        ctx.lineWidth = "1";
+		// dibujo la escena esquematica con el motor 
+	    _world.Render(ctx);
+		
+    }
+}
+
+
+function RenderLoop() 
+{
+    if (!init)
+		return;
+    if (Objetivo.position.y <= 48) {
+        Update();
+        Render();
+    } else {
+        ctx.font = "100px Arial";
+        ctx.strokeText("GANASTE!", 450, 400);
+        console.log("GANASTE!");
+    }
+    //console.log(Canion.orient);
+}
+
+
+function doKeyDown(e) 
+{
+	var xPos = (mouse_x-ox)/ ex; 
+	var yPos = (mouse_y-oy)/ ey; 
+	
+	if(e.keyCode == 38) Canion.SetOrient(Canion.orient - 0.05);
+	if(e.keyCode == 40) Canion.SetOrient(Canion.orient + 0.05);
+	if (e.keyCode == 32) {
+	    shoot();
+	};
+}
+
+function shoot() {
+
+    Bala = _world.AddCircle(OX + posCanion.x + AnchoCanion * Math.cos(Canion.orient) + posBala.x,
+                            DY - posCanion.y + OY + AnchoCanion * Math.sin(Canion.orient) + posBala.y, Radio);
+    Bala.velocity.x = SM * Math.cos(Canion.orient);
+    Bala.velocity.y = SM * Math.sin(Canion.orient);
+    var clas = getRandomInt(0, 3);
+    if (clas == 1)
+        Bala.color = '#666';
+    else if (clas == 2)
+        Bala.color = '#000';
+    //else
+    Bala.img = img;
+    Balas.push({ bala: Bala, lifeTime: time, bClass: clas, active: false });
+}
+
+function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min)) + min;
+}
+
+function onMouseMove() 
+{
+	var xPos = window.event.offsetX;
+	var yPos = window.event.offsetY;
+
+    // actualizo la posicion del mouse
+	mouse_x = xPos;
+	mouse_y = yPos;
+	
+    var dist = 
+	//console.log(xPos + " | " + yPos);
+	//Canion.SetOrient(Math.atan(posCanion.y - yPos / xPos - posCanion.x));
+	Canion.SetOrient(Math.atan2(((oy + DY - posCanion.y)*10 - yPos),((ox + posCanion.x)*10 - xPos)) + 3.14);
+	console.log((oy + DY - posCanion.y)*10)
+}
+
+function onMouseDown(e) {
+    e = e || window.event;
+    switch (e.which)
+    {
+        case 1:
+            shoot();
+            break;
+        case 2:
+            // middle button
+            break;
+        case 3:
+            // right button
+            break;
+    }
+}
+
+
+function onMouseUp(e) {
+    e = e || window.event;
+    switch (e.which) {
+        case 1:
+            // Left button
+            break;
+        case 2:
+            // middle button
+            break;
+        case 3:
+            // right button
+            break;
+    }
+}
+
+function loadscene()
+{
+	
+	// piso
+    var p = _world.AddBox(OX + PosPiso.x,OY + DY - PosPiso.y,DX*2,2);
+    p.SetStatic();
+	
+	//Canion
+	Canion = _world.AddBox(OX + posCanion.x, DY - posCanion.y + OY, AnchoCanion, AltoCanion);
+	Canion.shape.SetCenterOfMass(new Vector2(-3,0));
+	Canion.SetOrient(-1);
+	Canion.SetStatic();
+
+	for (var bI = 0; bI < 3; bI++) {
+	    _world.AddBox(DX - 5 - bI*15, DY - 5, 2, 5);
+	    _world.AddBox(DX - 15 - bI * 15, DY - 5, 2, 5);
+	    _world.AddBox(DX - 10 - bI * 15, DY - 10, 13, 2);
+	}
+
+	for (var bI = 0; bI < 2; bI++) {
+	    _world.AddBox(DX - 12 - bI * 15, DY - 12, 2, 5);
+	    _world.AddBox(DX - 22 - bI * 15, DY - 12, 2, 5);
+	    _world.AddBox(DX - 17 - bI * 15, DY - 17, 13, 2);
+	}
+
+	_world.AddBox(DX - 20, DY - 22, 2, 5);
+	_world.AddBox(DX - 30, DY - 22, 2, 5);
+	_world.AddBox(DX - 25, DY - 27, 13, 2);
+
+	Objetivo = _world.AddTri(DX - 20, DY - 29, DX - 32, DY - 29, DX - 26, DY - 35);
+	Objetivo.color = '#333';
+    init = true;
+
+}
+
+function main()
+{   
+	document.addEventListener( "keydown", doKeyDown, true);
+	document.addEventListener("mousemove", onMouseMove, true);
+	document.addEventListener("mousedown", onMouseDown, true);
+	document.addEventListener("mouseup", onMouseUp, true);
+
+    canvas = document.getElementById('mycanvas');
+    ctx = canvas.getContext('2d');
+	loadscene();
+	setInterval(RenderLoop, elapsed_time * 1000);
+} 
+
+
+</script>
+</head>
+<body onload="main();">
+	<canvas id="mycanvas" width="1800" height="900"></canvas>
+</body>
+</html>
+ 

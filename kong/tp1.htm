@@ -1,0 +1,344 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+
+<script type="text/javascript" src="engine/math.js"></script>
+<script type="text/javascript" src="engine/body.js"></script>
+<script type="text/javascript" src="engine/world.js"></script>
+<script type="text/javascript" src="engine/collision.js"></script>
+<script type="text/javascript" src="engine/contact.js"></script>
+<script type="text/javascript" src="engine/constraint.js"></script>
+<script type="text/javascript" src="engine/ragdall.js"></script>
+
+<script type="text/javascript">
+
+var elapsed_time = 1/60;
+var timer=0;
+var time=0;
+var punto=0;
+var canvas;
+var ctx;
+var	ex = 10;
+var ey = 10;
+var ox = 20;
+var oy = 20;
+
+
+// pos y tamaño de pantalla
+var OX = 1;
+var OY = 1;
+var DX = 80;
+var DY = 60;
+
+// posicion del mouse
+var mouse_x = 0;
+var mouse_y = 0;
+
+var gravity = new Vector2( 0, 40);
+var fixed_dt = 1.0/60.0;								// avance del tiempo constante
+var _world = new World();
+var init = false;
+var cantidad_bala=10;
+var bala=null;
+var llave=false;
+var piso=null;
+var d=null;
+var iz=null;
+var ar=null;
+var ball=null;
+var block=null;
+var pause=false;
+var item=null;
+var idblock=998;
+var idfloor=999;
+var idball=997;
+var iditem=996;
+var idbala=995;
+var idar=994;
+var dificutad=100;
+
+
+
+
+
+
+
+function Update() 
+
+{
+    _world.Update(elapsed_time);
+
+	for(var i=0;i<_world.m_contactCount;i++){
+	 var Contact=_world.contacts[i];
+	if(Contact.A.id==idblock&& Contact.B.id==idfloor){
+	  Contact.A.deleted=true;
+	  
+	}
+	else
+	if(Contact.A.id==idfloor&&Contact.B.id==idblock){
+	 Contact.B.deleted=true;
+	 }
+	else
+	if(Contact.A.id==idblock&&Contact.B.id==idball){
+	Contact.B.deleted=true;
+	pause=true;
+	
+	}
+	if(Contact.A.id==idball&&Contact.B.id==idblock){
+	Contact.A.deleted=true;
+	pause=true;
+	
+	}
+	else
+	if(Contact.A.id==iditem&& Contact.B.id==idball){
+	  Contact.A.deleted=true;
+	  llave=true;
+	  cantidad_bala=10;
+	}
+	else
+	if(Contact.A.id==idball&&Contact.B.id==iditem){
+	 Contact.B.deleted=true;
+	 llave=true;
+	 cantidad_bala=10;
+	 }
+	 else
+	 if(Contact.A.id==idblock&& Contact.B.id==idbala){
+	  Contact.A.deleted=true;
+	  Contact.B.deleted=true;
+	}
+	else
+	if(Contact.A.id==idbala&&Contact.B.id==idblock){
+	 Contact.B.deleted=true;
+	 Contact.A.deleted=true;
+	 }
+	else
+	if(Contact.A.id==idbala&& Contact.B.id==idar){
+	  Contact.A.deleted=true;
+	  
+	}
+	else
+	if(Contact.A.id==idar&&Contact.B.id==idbala){
+	 Contact.B.deleted=true;
+	 }
+	 }
+	 
+	
+}
+
+
+function Render() 
+{
+    if (canvas.getContext)
+    {
+        // borro la pantalla
+        ctx.fillStyle = 'rgba(0,0,0,255)';
+        ctx.fillRect(0,0,2000,2000);
+	
+		
+		if(!pause){
+			timer=timer+1;
+			var XX=Math.random(1,50)*100;
+			var YY=Math.random(1,50)*100;
+			if(timer%dificutad==2)
+			{
+			        var tamanio=Math.random(10,20)*7;
+					block=_world.AddBox(XX,1,tamanio,tamanio);
+					block.color='rgba(255,0,205,255)';
+				    block.id=idblock;
+					dificutad=dificutad-5;
+					if(dificutad<5){
+					dificutad=5;
+					}
+					
+				
+			}
+			time++;
+			if(time%1000==3)
+			{
+			 item=_world.AddBox(XX,YY,1,1);
+			 item.color='rgba(0,0,255,255)';
+			 item.id=iditem;
+			 item.collider_list=[block];
+			 item.SetStatic();
+			  
+			 
+			   
+			   }
+			
+			
+			}
+			}
+		if(!pause){
+		punto++;
+	    ctx.fillStyle=' rgba(0,200,200,200)';
+		ctx.fillText("puntos="+punto,40*10,25*10);
+		ctx.font="30px Arial";
+     }
+	 if(pause){
+	    ctx.fillStyle=' rgba(0,200,200,200)';
+		ctx.fillText("su puntos="+punto+" apreta A para empezar",40*10,25*10);
+		ctx.font="30px Arial";
+	 
+	 
+	 }
+		// dibujo la escena esquematica con el motor 
+	    _world.Render(ctx);
+	
+}
+
+
+function RenderLoop() 
+{
+    if (!init)
+		return;
+   
+	Update();
+	Render();
+	
+	
+}
+
+
+function doKeyDown(e) 
+{
+  
+	
+	if(e.keyCode==32){
+	if(llave){
+	bala=_world.AddCircle(ball.position.x,ball.position.y,0.5);
+	bala.velocity=new Vector2(0,-100);
+	bala.id=idbala;
+	cantidad_bala--;
+	}
+	if(cantidad_bala==0){
+	llave=false;
+	}
+	}
+	
+	
+	if(e.keyCode==65){
+	
+	Restart();
+	
+	}
+   	var yy=40
+	if(e.keyCode==40){
+	
+	ball.velocity=new Vector2(0,yy);
+	yy+=5;
+	}
+	var yy=-40;
+	if(e.keyCode==38){
+	ball.velocity=new Vector2(0,yy);
+	yy+=5;
+	
+	}
+	
+	if(e.keyCode==39)
+	{ 
+	ball.velocity=new Vector2(30,0);
+	}
+	
+	if(e.keyCode==37){
+	
+	ball.velocity=new Vector2(-30,0);
+	}
+	
+}
+
+function onMouseMove() 
+{
+	var xPos = window.event.offsetX;
+	var yPos = window.event.offsetY;
+
+    // actualizo la posicion del mouse
+	mouse_x = xPos;
+	mouse_y = yPos;
+}
+
+function onMouseDown(e) {
+    e = e || window.event;
+    switch (e.which)
+    {
+        case 1:
+            // Left button
+            break;
+        case 2:
+            // middle button
+            break;
+        case 3:
+            // right button
+            break;
+    }
+}
+
+
+function onMouseUp(e) {
+    e = e || window.event;
+    switch (e.which) {
+        case 1:
+            // Left button
+            break;
+        case 2:
+            // middle button
+            break;
+        case 3:
+            // right button
+            break;
+    }
+}
+function Restart(){
+ball=_world.AddCircle(DX/2,DY,1);
+ball.id=idball;
+punto=0;
+pause=false;
+bala=0;
+
+}
+function loadscene()
+{
+	
+	// piso
+    piso = _world.AddBox(OX+DX/2,OY+DY+8,DX+16,2);
+	piso.id=idfloor;
+    piso.SetStatic();
+    d= _world.AddBox(OX+1-5,OY+DY/2,2,DY+20);
+	d.SetStatic();
+	iz= _world.AddBox(OX+DX+8,OY+DY/2,2,DY+20);
+	iz.SetStatic();
+    ar= _world.AddBox(OX+DX/2, OY-5,DX+16,2);
+	ar.id=idar;
+	ar.SetStatic();
+	ball=_world.AddCircle(DX/2,DY,1);
+	ball.id=idball;
+	//piso.collider_list=[ball];
+	init = true;
+
+}
+
+	
+
+
+
+function main()
+{   
+	document.addEventListener( "keydown", doKeyDown, true);
+	document.addEventListener("mousemove", onMouseMove, true);
+	document.addEventListener("mousedown", onMouseDown, true);
+	document.addEventListener("mouseup", onMouseUp, true);
+
+    canvas = document.getElementById('mycanvas');
+    ctx = canvas.getContext('2d');
+	loadscene();
+	
+    setInterval(RenderLoop, elapsed_time * 1000);
+} 
+
+
+</script>
+</head>
+<body onload="main();">
+	<canvas id="mycanvas" width="900" height="700"></canvas>
+</body>
+</html>
+ 

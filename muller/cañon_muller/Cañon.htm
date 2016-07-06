@@ -1,0 +1,420 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+
+<script type="text/javascript">
+
+var canvas;
+var ctx;
+
+
+var status = 0;
+var game_paused = false;
+
+// parametros del tiro oblicuo
+// Angulo del disparo
+var an = 45 * Math.PI / 180;
+// magnitud de la velocidad
+var vel = 350;
+
+var velimg = 11;
+var velimg2 = 40;
+var cont = 2;
+var cont2 = 0.30;
+var timer2 = 0;
+var timer = 0.05;
+var time = 0;
+var elapsed_time = 1/60;
+
+var pose_x = 1000;
+var altpot = 20;
+var anchpot = 10;
+var altpared = 300;
+var anchpared = 20;
+var posp_x = 150;
+var posp_y = 430;
+var vel_x = vel * Math.cos(an);
+var vel_y = vel * Math.sin(an);
+var pos_x = 0;
+var pos_y = 0;
+var radio = 27;
+var graviyy_escale = 20;
+var acel = 10 * graviyy_escale;
+
+var OX = 0;
+var OY = 0;
+var DX = 1000;
+var DY = 600;
+
+var flagscore1 = true;
+var flagscore2 = true;
+var flagscore3 = true;
+
+
+// imagenes
+var img = new Image(); 
+var img2 = new Image();
+var imgcañon = new Image();
+var imgarena = new Image();
+var imgcielo = new Image();
+var imgbase = new Image();
+var imgpared = new Image();
+var imgcanon = new Image();
+var imgrun = new Image();
+var imgvidas = new Image();
+var imgdeath = new Image();
+
+function Update() 
+{
+	if(status == 1)
+	{
+
+		vel_x = vel * Math.cos(an);
+		vel_y = vel * Math.sin(an);
+
+		// avanzo el tiempo
+		time += elapsed_time;
+		// computo las ecuaciones del tiro parabolico
+		pos_x = vel_x * time;
+		pos_y = vel_y * time - 0.5 * acel * time * time;
+
+		if(pos_x > 100 && pos_y < 0)
+		{
+			// choco contra el piso
+			pos_x = 0;
+			pos_y = 0;
+			status = 0;
+		}
+	}
+	
+	// limites angulo y potencia
+	if(an >= 89 * Math.PI / 180)
+	{
+		an = 89 * Math.PI / 180;
+	}
+	
+	if(an <= 20 * Math.PI / 180)
+	{
+		an = 20 * Math.PI / 180;
+	}
+	
+	if(vel >= 650)
+	{
+		vel = 650;
+		altpot = -120; 
+	}
+	
+	if(vel <= 350)
+	{
+		vel = 350;
+		altpot = 20;
+	}
+
+	// limites pelota
+	if(pos_x + radio >= posp_x && pos_x <= posp_x + anchpared && pos_y < DY - posp_y)
+	{
+		pos_x = 0;
+		pos_y = 0;
+		status = 0;
+	}
+	
+	
+	// movimiento enemigo
+	if(timer < cont && timer > 0)
+	{
+		timer += velimg * elapsed_time;
+		pose_x -= 80 * elapsed_time;
+		timer2 = 0;
+		cont += 1;
+		if(timer >= 5.35)
+		{
+			timer = 0.05;
+		}
+	}
+	
+	// muerte enemigo
+	if(timer2 < cont2 && timer2 > 0)
+	{
+		timer2 += velimg2 * elapsed_time;
+		pose_x += 80 * elapsed_time;
+		cont2 += 2;
+		if(timer2 >= 8.50)
+		{
+			cont2 = 2;
+			timer2 = 8.45;
+			timer = 0.05;
+			pose_x = 1000;
+		}
+	}
+	
+	// vidas
+	if(pose_x <= posp_x + anchpared)
+	{
+		pose_x = 1000;
+		if(flagscore3 == true)
+		{
+			flagscore3 = false;
+		}
+		else
+		{
+			if(flagscore2 == true)
+			{
+				flagscore2 = false;
+			}
+			else
+			{
+				if(flagscore1 == true)
+				{
+					flagscore1 = false;
+				}
+			}
+		}
+	}
+	
+	if(flagscore1 == false)
+	{
+		game_paused = true;
+		flagscore1 = true;
+		flagscore2 = true;
+		flagscore3 = true;
+		status = 0;
+	}
+	
+	// colision enemigo bala
+	if(pos_x + radio >= pose_x && timer > 0 && pos_x < pose_x + 100 && pos_y + radio < 100)
+	{
+		timer = 0;
+		timer2 = 0.05;
+	}
+	
+}
+
+
+
+function Render() 
+{
+	if (canvas.getContext)
+	{
+		// borro la pantalla
+		ctx.drawImage(imgcielo, 0,0,2000,2000);
+		
+		// dibujo el suelo
+		ctx.drawImage(imgarena, 0, 530, 1100, 120);
+
+		// dibujo detalles
+		ctx.drawImage(imgcanon, 45, 540, 60, 60);
+		
+		// dibujo la bola
+		ctx.drawImage(img, OX + pos_x , OY + DY - pos_y, radio,radio);
+	
+		// dibujo la base alta del cañon
+		ctx.drawImage(imgbase, -2, 580, 50, 30);
+		
+		var posc_x = 7;
+		var posc_y = 547;
+		var c = Math.cos(-an + 28 * Math.PI / 180);
+		var s = Math.sin(-an + 28 * Math.PI / 180);
+		var off_x = -20;
+		var off_y = -60;
+		var x = DX - (DX - posc_x) - off_x;
+		var y = DY - (DY - posc_y) - off_y;
+		
+		// dibujo el cañon
+		ctx.save();
+		ctx.setTransform(c, s, -s, c, c * (-x) - s * (-y) + x, s * (-x) + c * (-y) + y);
+		ctx.drawImage(imgcañon, posc_x, posc_y, 100, 60);
+		ctx.restore();
+		
+		// potencia del tiro
+		ctx.fillStyle = 'rgba(255,69,0,255)';
+		ctx.fillRect(15, 450, anchpot, altpot);
+		
+		ctx.fillStyle = 'rgba(255,69,0,255)';
+		ctx.fillRect(15, 450, 10, 20);
+		
+		// dibujo la base baja del cañon
+		ctx.drawImage(img2, -20, 590, 130/1.5, 80/1.5);
+		
+		
+		// dibujo la muralla
+		ctx.drawImage(imgpared, posp_x, posp_y, 150, 300);
+		
+		// enemigos
+		if(timer >= 0.05 && timer < 1.10)
+		{
+			ctx.drawImage(imgrun, 200, 0, 90, 110, pose_x, 550, 100, 100);
+		}
+		if(timer >= 1.10 && timer < 2.15)
+		{
+			ctx.drawImage(imgrun, 100, 0, 90, 110, pose_x, 550, 100, 100);
+		}
+		if(timer >= 2.15 && timer < 3.20)
+		{
+			ctx.drawImage(imgrun, 0, 0, 90, 110, pose_x, 550, 100, 100);
+		}
+		if(timer >= 3.20 && timer < 4.25)
+		{
+			ctx.drawImage(imgrun, 188, 110, 90, 110, pose_x, 545, 100, 100);
+		}
+		if(timer >= 4.25 && timer < 5.30)
+		{
+			ctx.drawImage(imgrun, 95, 110, 90, 110, pose_x, 545, 100, 100);
+		}
+		if(timer >= 5.30)
+		{
+			ctx.drawImage(imgrun, 0, 110, 90, 110, pose_x, 545, 100, 100);
+		}
+		
+		// enemigo muere
+		if(timer2 >= 0.05 && timer2 < 1.10)
+		{
+			ctx.drawImage(imgdeath, 265, 0, 90, 110, pose_x, 550, 100, 100);
+		}
+		if(timer2 >= 1.10 && timer2 < 2.15)
+		{
+			ctx.drawImage(imgdeath, 150, 0, 90, 110, pose_x, 550, 100, 100);
+		}
+		if(timer2 >= 2.15 && timer2 < 3.20)
+		{
+			ctx.drawImage(imgdeath, 35, 0, 90, 110, pose_x, 560, 100, 100);
+		}
+		if(timer2 >= 3.20 && timer2 < 4.25)
+		{
+			ctx.drawImage(imgdeath, 251, 100, 90, 110, pose_x, 560, 100, 100);
+		}
+		if(timer2 >= 4.25 && timer2 < 5.30)
+		{
+			ctx.drawImage(imgdeath, 140, 100, 90, 110, pose_x, 570, 100, 100);
+		}
+		if(timer2 >= 5.30 && timer2 < 6.35)
+		{
+			ctx.drawImage(imgdeath, 15, 100, 100, 110, pose_x, 570, 110, 100);
+		}
+		if(timer2 >= 6.35 && timer2 < 7.40)
+		{
+			ctx.drawImage(imgdeath, 245, 200, 100, 110, pose_x, 580, 110, 100);
+		}
+		if(timer2 >= 7.40 && timer2 < 8.45)
+		{
+			ctx.drawImage(imgdeath, 130, 200, 100, 110, pose_x, 580, 110, 100);
+		}
+		if(timer2 >= 8.45)
+		{
+			ctx.drawImage(imgdeath, 4, 200, 105, 110, pose_x, 590, 115, 100);
+		}
+		
+		
+		// dibujo las vidas
+		if(flagscore1 == true)
+		{
+		ctx.drawImage(imgvidas, 10, 10, 40, 40);
+		}
+		if(flagscore2 == true)
+		{
+		ctx.drawImage(imgvidas, 50, 10, 40, 40);
+		}
+		if(flagscore3 == true)
+		{
+		ctx.drawImage(imgvidas, 90, 10, 40, 40);
+		}
+		
+	}
+}
+
+
+function doKeyDown(e) 
+{
+	if(e.keyCode == 80)
+	{
+		game_paused = !game_paused;
+	}
+	else
+	if(e.keyCode == 32)
+	{
+		// disparo
+		if(status == 0)
+		{
+			status = 1;
+			time = 0;
+		}
+	}
+	else
+	if(e.keyCode == 87 && status == 0 && !game_paused)
+	{
+		// "W"
+		an += 0.05;
+	}
+	else
+	if(e.keyCode == 83 && status == 0 && !game_paused)
+	{
+		// "S"
+		an -= 0.05;
+	}
+	else
+	if(e.keyCode == 68 && status == 0 && !game_paused)
+	{
+		// "D"
+		vel += 50;
+		if(altpot > -20)
+		{
+			altpot -= 40;
+		}
+		else
+		{
+			altpot -= 20;
+		}
+	}
+	else
+	if(e.keyCode == 65 && status == 0 && !game_paused)
+	{
+		// "A"
+		vel -= 50;
+		if(altpot < -20)
+		{
+			altpot += 20;
+		}
+		else
+		{
+			altpot += 40;
+		}
+	}
+
+}
+
+
+function RenderLoop() 
+{
+	Render();
+	if(!game_paused)
+		Update();
+}
+
+function main()
+{   
+	canvas = document.getElementById('mycanvas');
+	document.addEventListener( "keydown", doKeyDown, true);
+	ctx = canvas.getContext('2d');
+	img.src = 'ball.png';
+	img2.src = 'base.png';
+	imgcañon.src = 'cañon.png';
+	imgarena.src = 'arena.png';
+	imgcielo.src = 'cielo.png';
+	imgbase.src = 'base2.png';
+	imgpared.src = 'pared.png';
+	imgcanon.src = 'canon.png';
+	imgrun.src = 'trote.png';
+	imgvidas.src = 'vidas.png';
+	imgdeath.src = 'muerte.png';
+	setInterval(RenderLoop, elapsed_time * 1000);
+} 
+
+
+
+
+</script>
+</head>
+<body onload="main();">
+	<canvas id="mycanvas" width="1100" height="650"></canvas>
+</body>
+</html>
+ 
